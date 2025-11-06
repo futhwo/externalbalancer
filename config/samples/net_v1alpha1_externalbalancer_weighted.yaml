@@ -1,0 +1,27 @@
+apiVersion: net.futhwo.io/v1alpha1
+kind: ExternalBalancer
+metadata:
+  name: provaui
+  namespace: default
+spec:
+  strategy: WeightedPerService
+  ingressRouteLabels:
+    traefik.io/ingress-controller: edge-a
+  host: site.mydomain.com
+  entryPoints: ["websecure"]
+  tlsSecretName: wildcard-mydomain-com
+  stickyCookieName: lvl1
+  useEndpointSlice: true
+  backends:
+    - name: provaui-1
+      address: 10.11.12.191
+      port: 9080
+      weight: 1
+      h2c: true
+      stickyCookieName: lvl2
+    - name: provaui-2
+      address: 10.11.12.192
+      port: 9080
+      weight: 1
+      h2c: true
+      stickyCookieName: lvl2

@@ -1,0 +1,22 @@
+apiVersion: net.futhwo.io/v1alpha1
+kind: ExternalBalancer
+metadata:
+  name: provaui
+  namespace: default
+spec:
+  strategy: SingleService
+  ingressRouteLabels:
+    traefik.io/ingress-controller: edge-b
+  host: site.mydomain.com
+  entryPoints: ["websecure"]
+  tlsSecretName: wildcard-mydomain-com
+  useEndpointSlice: true
+  backends:
+    - name: b1
+      address: 10.11.12.191
+      port: 9080
+      h2c: true
+    - name: b2
+      address: 10.11.12.192
+      port: 9080
+      h2c: true

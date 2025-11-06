@@ -49,7 +49,7 @@ func main() {
     },
     HealthProbeBindAddress: probeAddr, // e.g. ":8081"
     LeaderElection:         enableLeaderElection,
-    LeaderElectionID:       "extlb-operator.cdlan.net",
+    LeaderElectionID:       "extlb-operator.futhwo.net",
 })
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")

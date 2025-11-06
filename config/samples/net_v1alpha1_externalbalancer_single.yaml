@@ -1,4 +1,4 @@
-apiVersion: net.cdlan.io/v1alpha1
+apiVersion: net.futhwo.io/v1alpha1
 kind: ExternalBalancer
 metadata:
   name: provaui
@@ -7,9 +7,9 @@ spec:
   strategy: SingleService
   ingressRouteLabels:
     traefik.io/ingress-controller: edge-b
-  host: radius-traefik.cdlan.net
+  host: radius-traefik.futhwo.net
   entryPoints: ["websecure"]
-  tlsSecretName: wildcard-cdlan-net
+  tlsSecretName: wildcard-futhwo-net
   useEndpointSlice: true
   backends:
     - name: b1

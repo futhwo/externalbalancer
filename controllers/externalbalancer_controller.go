@@ -21,7 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-const finalizerName = "externalbalancer.net.cdlan.io/finalizer"
+const finalizerName = "externalbalancer.net.futhwo.io/finalizer"
 
 type ExternalBalancerReconciler struct {
 	client.Client
@@ -29,8 +29,8 @@ type ExternalBalancerReconciler struct {
 }
 
 // RBAC
-// +kubebuilder:rbac:groups=net.cdlan.io,resources=externalbalancers,verbs=get;list;watch;update;patch
-// +kubebuilder:rbac:groups=net.cdlan.io,resources=externalbalancers/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=net.futhwo.io,resources=externalbalancers,verbs=get;list;watch;update;patch
+// +kubebuilder:rbac:groups=net.futhwo.io,resources=externalbalancers/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups="",resources=services;endpoints,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="discovery.k8s.io",resources=endpointslices,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="traefik.io",resources=ingressroutes;traefikservices,verbs=get;list;watch;create;update;patch;delete

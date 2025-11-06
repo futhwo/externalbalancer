@@ -4,7 +4,7 @@ run:
 
 .PHONY: crd
 crd:
-	kubectl apply -f config/crd/bases/net.cdlan.io_externalbalancers.yaml
+	kubectl apply -f config/crd/bases/net.futhwo.io_externalbalancers.yaml
 
 .PHONY: samples
 samples:

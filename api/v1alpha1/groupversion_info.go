@@ -1,5 +1,5 @@
 // +kubebuilder:object:generate=true
-// +groupName=net.cdlan.io
+// +groupName=net.futhwo.io
 package v1alpha1
 
 import (
@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	GroupVersion  = schema.GroupVersion{Group: "net.cdlan.io", Version: "v1alpha1"}
+	GroupVersion  = schema.GroupVersion{Group: "net.futhwo.io", Version: "v1alpha1"}
 	SchemeBuilder = &scheme.Builder{GroupVersion: GroupVersion}
 	AddToScheme   = SchemeBuilder.AddToScheme
 )

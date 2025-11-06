@@ -12,6 +12,6 @@ rules:
 - apiGroups: ["traefik.io"]
   resources: ["ingressroutes","traefikservices"]
   verbs: ["get","list","watch","create","update","patch","delete"]
-- apiGroups: ["net.cdlan.io"]
+- apiGroups: ["net.futhwo.io"]
   resources: ["externalbalancers","externalbalancers/status"]
   verbs: ["get","list","watch","update","patch"]

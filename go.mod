@@ -1,4 +1,4 @@
-module github.com/futhwi/externalbalancer
+module github.com/futhwo/externalbalancer
 
 go 1.22.0
 

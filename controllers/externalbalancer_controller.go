@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sort"
 
-	netv1alpha1 "github.com/futhwi/externalbalancer/api/v1alpha1"
+	netv1alpha1 "github.com/futhwo/externalbalancer/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/api/errors"

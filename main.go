@@ -4,8 +4,8 @@ import (
 	"flag"
 	"os"
 
-	netv1alpha1 "github.com/futhwi/externalbalancer/api/v1alpha1"
-	"github.com/futhwi/externalbalancer/controllers"
+	netv1alpha1 "github.com/futhwo/externalbalancer/api/v1alpha1"
+	"github.com/futhwo/externalbalancer/controllers"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/runtime"

@@ -1,4 +1,4 @@
-module github.com/yourorg/extlb-operator
+module github.com/futhwo/externalbalancer
 
 go 1.22
 

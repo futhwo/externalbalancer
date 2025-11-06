@@ -24,36 +24,47 @@ spec:
               properties:
                 strategy:
                   type: string
+                  description: Load balancing strategy to use.
                   enum: ["WeightedPerService","SingleService"]
                   default: "WeightedPerService"
                 ingressRouteLabels:
+                  description: Labels to apply to the created IngressRoute.
                   type: object
                   additionalProperties:
                     type: string
                 host:
+                  description: Hostname for the IngressRoute.
                   type: string
                 entryPoints:
+                  description: List of Traefik entry points to use.
                   type: array
                   items:
                     type: string
                 tlsSecretName:
+                  description: Name of the TLS secret to use.
                   type: string
                 stickyCookieName:
+                  description: Name of the sticky cookie to use.
                   type: string
                 useEndpointSlice:
+                  description: Whether to use EndpointSlice instead of Endpoints.
                   type: boolean
                 serviceTemplate:
+                  description: Template for the created Service.
                   type: object
                   properties:
                     annotations:
+                      description: Annotations to apply to the created Service.
                       type: object
                       additionalProperties:
                         type: string
                     labels:
+                      description: Labels to apply to the created Service.
                       type: object
                       additionalProperties:
                         type: string
                 backends:
+                  description: List of backend servers.
                   type: array
                   minItems: 1
                   items:
@@ -61,19 +72,25 @@ spec:
                     required: [name, address, port]
                     properties:
                       name:
+                        description: Name of the backend service.
                         type: string
                       address:
+                        description: IP address or hostname of the backend service.
                         type: string
                       port:
+                        description: Port number of the backend service.
                         type: integer
                         format: int32
                         minimum: 1
                       weight:
+                        description: Weight of the backend service for load balancing.
                         type: integer
                         format: int32
                       h2c:
+                        description: Whether to use HTTP/2 Cleartext (H2C) for the backend service.
                         type: boolean
                       stickyCookieName:
+                        description: Name of the sticky cookie to use for the backend service.
                         type: string
                 middlewares:  
                   type: array

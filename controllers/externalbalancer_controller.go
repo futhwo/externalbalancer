@@ -149,6 +149,7 @@ func (r *ExternalBalancerReconciler) Reconcile(ctx ccontext.Context, req ctrl.Re
 		ts.SetName(wrrName)
 		ts.SetNamespace(eb.Namespace)
 		_, err := createOrUpdateUnstructured(ctx, r.Client, ts, func(obj *unstructured.Unstructured) error {
+			mergeMetadataLabels(obj, eb.Spec.IngressRouteLabels)
 			var services []map[string]any
 			for _, b := range eb.Spec.Backends {
 				w := 1

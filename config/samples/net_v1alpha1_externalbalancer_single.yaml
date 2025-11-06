@@ -6,7 +6,7 @@ metadata:
 spec:
   strategy: SingleService
   ingressRouteLabels:
-    traefik.io/ingress-controller: edge-b
+    ingress-scope: internal
   host: radius-traefik.cdlan.net
   entryPoints: ["websecure"]
   tlsSecretName: wildcard-cdlan-net

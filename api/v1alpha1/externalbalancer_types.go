@@ -19,13 +19,46 @@ type ServiceTemplate struct {
 }
 
 type Backend struct {
-	IngressRouteLabels map[string]string `json:"ingressRouteLabels,omitempty"`
 	Name             string `json:"name"`
 	Address          string `json:"address"` // IP or DNS
 	Port             int32  `json:"port"`
 	Weight           *int32 `json:"weight,omitempty"`
 	H2C              bool   `json:"h2c,omitempty"`
 	StickyCookieName string `json:"stickyCookieName,omitempty"`
+}
+
+// MiddlewareRef references an existing Traefik Middleware by name/namespace.
+type MiddlewareRef struct {
+	Name      string `json:"name"`
+	// Optional; defaults to the IngressRoute namespace when empty.
+	Namespace string `json:"namespace,omitempty"`
+}
+
+// TLSConfig allows either a direct Secret or a cert-manager Certificate.
+type TLSConfig struct {
+	// SecretName: name of an existing Secret with TLS keypair.
+	SecretName string `json:"secretName,omitempty"`
+	// CertManager: when set, the operator will create/maintain a cert-manager Certificate.
+	CertManager *CertManagerTLS `json:"certManager,omitempty"`
+}
+
+type CertManagerTLS struct {
+	// SecretName to be created by cert-manager. If empty, defaults to "<metadata.name>-tls".
+	SecretName string `json:"secretName,omitempty"`
+	// IssuerRef selects an Issuer or ClusterIssuer.
+	IssuerRef CertManagerIssuerRef `json:"issuerRef"`
+	// Optional fields mirroring cert-manager.
+	Duration    *metav1.Duration `json:"duration,omitempty"`
+	RenewBefore *metav1.Duration `json:"renewBefore,omitempty"`
+	Usages      []string         `json:"usages,omitempty"`
+}
+
+type CertManagerIssuerRef struct {
+	Name  string `json:"name"`
+	// Kind must be "Issuer" or "ClusterIssuer"; defaults to ClusterIssuer when empty.
+	Kind  string `json:"kind,omitempty"`
+	// Group defaults to "cert-manager.io" when empty.
+	Group string `json:"group,omitempty"`
 }
 
 type ExternalBalancerSpec struct {
@@ -36,9 +69,13 @@ type ExternalBalancerSpec struct {
 	// Labels applied only to the IngressRoute object
 	IngressRouteLabels map[string]string `json:"ingressRouteLabels,omitempty"`
 
-	Host          string   `json:"host"`
-	EntryPoints   []string `json:"entryPoints"`
-	TlsSecretName string   `json:"tlsSecretName"`
+	Host        string   `json:"host"`
+	EntryPoints []string `json:"entryPoints"`
+
+	// TLS configuration. Exactly one of:
+	// - tls.secretName
+	// - tls.certManager
+	TLS *TLSConfig `json:"tls"`
 
 	// WRR top-level sticky cookie (WeightedPerService only)
 	StickyCookieName string `json:"stickyCookieName,omitempty"`
@@ -49,15 +86,8 @@ type ExternalBalancerSpec struct {
 	// +kubebuilder:validation:MinItems=1
 	Backends []Backend `json:"backends"`
 
-	// Middlewares to apply to the IngressRoute's route.
-	// Each item refers to an existing Traefik Middleware.
+	// Middlewares to apply to the IngressRoute's route (existing Traefik Middleware references).
 	Middlewares []MiddlewareRef `json:"middlewares,omitempty"`
-}
-
-// MiddlewareRef references an existing Traefik Middleware by name/namespace.
-type MiddlewareRef struct {
-    Name      string `json:"name"`
-    Namespace string `json:"namespace,omitempty"`
 }
 
 type ExternalBalancerStatus struct {
@@ -147,6 +177,10 @@ func (in *ExternalBalancerSpec) DeepCopyInto(out *ExternalBalancerSpec) {
 			in.Backends[i].DeepCopyInto(&out.Backends[i])
 		}
 	}
+	if in.TLS != nil {
+		out.TLS = &TLSConfig{}
+		in.TLS.DeepCopyInto(out.TLS)
+	}
 	if in.Middlewares != nil {
 		out.Middlewares = make([]MiddlewareRef, len(in.Middlewares))
 		copy(out.Middlewares, in.Middlewares)
@@ -218,11 +252,34 @@ func (in *ExternalBalancerList) DeepCopy() *ExternalBalancerList {
 }
 func (in *ExternalBalancerList) DeepCopyObject() runtime.Object { return in.DeepCopy() }
 
-// DeepCopy for MiddlewareRef (trivial, value type)
+// DeepCopy helpers for TLS types (value-like)
 func (in *MiddlewareRef) DeepCopyInto(out *MiddlewareRef) { *out = *in }
 func (in *MiddlewareRef) DeepCopy() *MiddlewareRef {
-    if in == nil { return nil }
-    out := new(MiddlewareRef)
-    *out = *in
-    return out
+	if in == nil { return nil }
+	out := new(MiddlewareRef)
+	*out = *in
+	return out
 }
+func (in *TLSConfig) DeepCopyInto(out *TLSConfig) {
+	*out = *in
+	if in.CertManager != nil {
+		out.CertManager = &CertManagerTLS{}
+		in.CertManager.DeepCopyInto(out.CertManager)
+	}
+}
+func (in *TLSConfig) DeepCopy() *TLSConfig {
+	if in == nil { return nil }
+	out := new(TLSConfig); in.DeepCopyInto(out); return out
+}
+func (in *CertManagerTLS) DeepCopyInto(out *CertManagerTLS) {
+	*out = *in
+	if in.Duration != nil { d := *in.Duration; out.Duration = &d }
+	if in.RenewBefore != nil { r := *in.RenewBefore; out.RenewBefore = &r }
+	if in.Usages != nil { out.Usages = append([]string{}, in.Usages...) }
+}
+func (in *CertManagerTLS) DeepCopy() *CertManagerTLS {
+	if in == nil { return nil }
+	out := new(CertManagerTLS); in.DeepCopyInto(out); return out
+}
+func (in *CertManagerIssuerRef) DeepCopyInto(out *CertManagerIssuerRef) { *out = *in }
+func (in *CertManagerIssuerRef) DeepCopy() *CertManagerIssuerRef { if in == nil { return nil }; out := new(CertManagerIssuerRef); *out = *in; return out }

@@ -28,12 +28,12 @@ type ExternalBalancerReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-// RBAC
 // +kubebuilder:rbac:groups=net.futhwo.io,resources=externalbalancers,verbs=get;list;watch;update;patch
 // +kubebuilder:rbac:groups=net.futhwo.io,resources=externalbalancers/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups="",resources=services;endpoints,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="discovery.k8s.io",resources=endpointslices,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="traefik.io",resources=ingressroutes;traefikservices,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups="cert-manager.io",resources=certificates,verbs=get;list;watch;create;update;patch;delete
 
 func (r *ExternalBalancerReconciler) Reconcile(ctx ccontext.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
@@ -56,6 +56,67 @@ func (r *ExternalBalancerReconciler) Reconcile(ctx ccontext.Context, req ctrl.Re
 		if err := r.Update(ctx, &eb); err != nil {
 			return ctrl.Result{}, err
 		}
+	}
+
+	// helper: build middlewares array for Traefik unstructured specs
+	buildMiddlewaresArray := func(eb *netv1alpha1.ExternalBalancer) []any {
+		if len(eb.Spec.Middlewares) == 0 {
+			return nil
+		}
+		out := make([]any, 0, len(eb.Spec.Middlewares))
+		for _, m := range eb.Spec.Middlewares {
+			item := map[string]any{"name": m.Name}
+			if m.Namespace != "" {
+				item["namespace"] = m.Namespace
+			}
+			out = append(out, item)
+		}
+		return out
+	}
+
+	// helper: ensure TLS and return the secretName to reference from IngressRoute
+	ensureTLS := func(ctx ccontext.Context, eb *netv1alpha1.ExternalBalancer) (string, error) {
+		if eb.Spec.TLS == nil {
+			return "", fmt.Errorf("spec.tls is required")
+		}
+		// Case 1: direct Secret
+		if eb.Spec.TLS.SecretName != "" {
+			return eb.Spec.TLS.SecretName, nil
+		}
+		// Case 2: cert-manager Certificate
+		cm := eb.Spec.TLS.CertManager
+		if cm == nil {
+			return "", fmt.Errorf("exactly one of tls.secretName or tls.certManager must be set")
+		}
+		secName := cm.SecretName
+		if secName == "" {
+			secName = eb.Name + "-tls"
+		}
+		issuerKind := cm.IssuerRef.Kind
+		if issuerKind == "" {
+			issuerKind = "ClusterIssuer"
+		}
+		issuerGroup := cm.IssuerRef.Group
+		if issuerGroup == "" {
+			issuerGroup = "cert-manager.io"
+		}
+		cert := &unstructured.Unstructured{}
+		cert.SetGroupVersionKind(schema.GroupVersionKind{Group: "cert-manager.io", Version: "v1", Kind: "Certificate"})
+		cert.SetName(eb.Name)
+		cert.SetNamespace(eb.Namespace)
+		_, err := createOrUpdateUnstructured(ctx, r.Client, cert, func(o *unstructured.Unstructured) error {
+			spec := map[string]any{
+				"secretName": secName,
+				"dnsNames":   []any{eb.Spec.Host},
+				"issuerRef":  map[string]any{"name": cm.IssuerRef.Name, "kind": issuerKind, "group": issuerGroup},
+			}
+			if cm.Duration != nil { spec["duration"] = cm.Duration.Duration.String() }
+			if cm.RenewBefore != nil { spec["renewBefore"] = cm.RenewBefore.Duration.String() }
+			if len(cm.Usages) > 0 { arr := make([]any, 0, len(cm.Usages)); for _, u := range cm.Usages { arr = append(arr, u) }; spec["usages"] = arr }
+			o.Object["spec"] = spec
+			return controllerutil.SetControllerReference(&eb, o, r.Scheme)
+		})
+		return secName, err
 	}
 
 	strategy := eb.Spec.Strategy
@@ -149,7 +210,6 @@ func (r *ExternalBalancerReconciler) Reconcile(ctx ccontext.Context, req ctrl.Re
 		ts.SetName(wrrName)
 		ts.SetNamespace(eb.Namespace)
 		_, err := createOrUpdateUnstructured(ctx, r.Client, ts, func(obj *unstructured.Unstructured) error {
-			mergeMetadataLabels(obj, eb.Spec.IngressRouteLabels)
 			var services []map[string]any
 			for _, b := range eb.Spec.Backends {
 				w := 1
@@ -157,9 +217,9 @@ func (r *ExternalBalancerReconciler) Reconcile(ctx ccontext.Context, req ctrl.Re
 					w = int(*b.Weight)
 				}
 				item := map[string]any{
-					"name": b.Name,
-					"kind": "Service",
-					"port": b.Port,
+					"name":   b.Name,
+					"kind":   "Service",
+					"port":   b.Port,
 					"weight": w,
 				}
 				if b.StickyCookieName != "" {
@@ -178,6 +238,9 @@ func (r *ExternalBalancerReconciler) Reconcile(ctx ccontext.Context, req ctrl.Re
 		if err != nil { return ctrl.Result{}, err }
 
 		// IngressRoute -> TraefikService
+		tlsSecretName, err := ensureTLS(ctx, &eb)
+		if err != nil { return ctrl.Result{}, err }
+		mw := buildMiddlewaresArray(&eb)
 		ir := &unstructured.Unstructured{}
 		ir.SetGroupVersionKind(schema.GroupVersionKind{Group: "traefik.io", Version: "v1alpha1", Kind: "IngressRoute"})
 		ir.SetName(eb.Name)
@@ -188,16 +251,20 @@ func (r *ExternalBalancerReconciler) Reconcile(ctx ccontext.Context, req ctrl.Re
 				"kind":     "Rule",
 				"match":    fmt.Sprintf("Host(`%s`)", eb.Spec.Host),
 				"priority": 1,
-				"services": []any{map[string]any{"kind": "TraefikService", "name": wrrName}},
+				"services": []any{
+					map[string]any{
+						"kind": "TraefikService",
+						"name": wrrName,
+					},
+				},
 			}
-			mw := buildMiddlewaresArray(&eb)
 			if len(mw) > 0 {
 				route["middlewares"] = mw
 			}
 			obj.Object["spec"] = map[string]any{
 				"entryPoints": eb.Spec.EntryPoints,
 				"routes":      []any{route},
-				"tls":         map[string]any{"secretName": eb.Spec.TlsSecretName},
+				"tls":         map[string]any{"secretName": tlsSecretName},
 			}
 			return controllerutil.SetControllerReference(&eb, obj, r.Scheme)
 		})
@@ -280,6 +347,9 @@ func (r *ExternalBalancerReconciler) Reconcile(ctx ccontext.Context, req ctrl.Re
 		createdEps++
 
 		// IngressRoute -> Service
+		tlsSecretName, err := ensureTLS(ctx, &eb)
+		if err != nil { return ctrl.Result{}, err }
+		mw := buildMiddlewaresArray(&eb)
 		ir := &unstructured.Unstructured{}
 		ir.SetGroupVersionKind(schema.GroupVersionKind{Group: "traefik.io", Version: "v1alpha1", Kind: "IngressRoute"})
 		ir.SetName(eb.Name)
@@ -292,14 +362,13 @@ func (r *ExternalBalancerReconciler) Reconcile(ctx ccontext.Context, req ctrl.Re
 				"priority": 1,
 				"services": []any{map[string]any{"kind": "Service", "name": svcName, "port": commonPort}},
 			}
-			mw := buildMiddlewaresArray(&eb)
 			if len(mw) > 0 {
 				route["middlewares"] = mw
 			}
 			obj.Object["spec"] = map[string]any{
 				"entryPoints": eb.Spec.EntryPoints,
 				"routes":      []any{route},
-				"tls":         map[string]any{"secretName": eb.Spec.TlsSecretName},
+				"tls":         map[string]any{"secretName": tlsSecretName},
 			}
 			return controllerutil.SetControllerReference(&eb, obj, r.Scheme)
 		})
@@ -397,20 +466,4 @@ func mergeMetadataLabels(obj *unstructured.Unstructured, labels map[string]strin
 	for k, v := range labels {
 		lbl[k] = v
 	}
-}
-
-// buildMiddlewaresArray converts eb.Spec.Middlewares to the unstructured form expected by Traefik.
-func buildMiddlewaresArray(eb *netv1alpha1.ExternalBalancer) []any {
-    if len(eb.Spec.Middlewares) == 0 {
-        return nil
-    }
-    out := make([]any, 0, len(eb.Spec.Middlewares))
-    for _, m := range eb.Spec.Middlewares {
-        item := map[string]any{"name": m.Name}
-        if m.Namespace != "" {
-            item["namespace"] = m.Namespace
-        }
-        out = append(out, item)
-    }
-    return out
 }

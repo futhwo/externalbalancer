@@ -20,51 +20,86 @@ spec:
           properties:
             spec:
               type: object
-              required: [host, entryPoints, tlsSecretName, backends]
+              required: [host, entryPoints, backends]
               properties:
                 strategy:
+                  description: "Load balancing strategy to use."
                   type: string
-                  description: Load balancing strategy to use.
                   enum: ["WeightedPerService","SingleService"]
                   default: "WeightedPerService"
                 ingressRouteLabels:
-                  description: Labels to apply to the created IngressRoute.
+                  description: "Labels to apply to the IngressRoute."
                   type: object
                   additionalProperties:
                     type: string
                 host:
-                  description: Hostname for the IngressRoute.
+                  description: "Hostname for the IngressRoute."
                   type: string
                 entryPoints:
-                  description: List of Traefik entry points to use.
+                  description: "Entry points for the IngressRoute."
                   type: array
                   items:
                     type: string
-                tlsSecretName:
-                  description: Name of the TLS secret to use.
-                  type: string
+                tls:
+                  description: "TLS configuration for the IngressRoute."
+                  type: object
+                  properties:
+                    secretName:
+                      description: "Name of the secret containing the TLS certificate."
+                      type: string
+                    certManager:
+                      description: "Cert-Manager configuration for automatic certificate management."
+                      type: object
+                      properties:
+                        secretName:
+                          description: "Name of the secret containing the TLS certificate."
+                          type: string
+                        issuerRef:
+                          description: "Issuer reference for the Cert-Manager."
+                          type: object
+                          required: ["name"]
+                          properties:
+                            name:
+                              description: "Name of the issuer."
+                              type: string
+                            kind:
+                              description: "Kind of the issuer."
+                              type: string
+                              enum: ["Issuer","ClusterIssuer"]
+                            group:
+                              description: "API group of the issuer."
+                              type: string
+                        duration:
+                          description: "Duration for the certificate."
+                          type: string
+                        renewBefore:
+                          description: "Renewal period before the certificate expires."
+                          type: string
+                        usages:
+                          description: "Usages for the certificate."
+                          type: array
+                          items:
+                            type: string
                 stickyCookieName:
-                  description: Name of the sticky cookie to use.
+                  description: "Name of the cookie to use for sticky sessions."
                   type: string
                 useEndpointSlice:
-                  description: Whether to use EndpointSlice instead of Endpoints.
+                  description: "Whether to use EndpointSlices for backend endpoints."
                   type: boolean
                 serviceTemplate:
-                  description: Template for the created Service.
                   type: object
                   properties:
                     annotations:
-                      description: Annotations to apply to the created Service.
+                      description: "Annotations to apply to the Service."
                       type: object
                       additionalProperties:
                         type: string
                     labels:
-                      description: Labels to apply to the created Service.
+                      description: "Labels to apply to the Service."
                       type: object
                       additionalProperties:
                         type: string
                 backends:
-                  description: List of backend servers.
                   type: array
                   minItems: 1
                   items:
@@ -72,54 +107,59 @@ spec:
                     required: [name, address, port]
                     properties:
                       name:
-                        description: Name of the backend service.
+                        description: "Name of the backend service."
                         type: string
                       address:
-                        description: IP address or hostname of the backend service.
+                        description: "Address of the backend service."
                         type: string
                       port:
-                        description: Port number of the backend service.
+                        description: "Port of the backend service."
                         type: integer
                         format: int32
                         minimum: 1
                       weight:
-                        description: Weight of the backend service for load balancing.
+                        description: "Weight of the backend service."
                         type: integer
                         format: int32
                       h2c:
-                        description: Whether to use HTTP/2 Cleartext (H2C) for the backend service.
+                        description: "Whether to use HTTP/2 Cleartext (h2c) for the backend service."
                         type: boolean
                       stickyCookieName:
-                        description: Name of the sticky cookie to use for the backend service.
+                        description: "Name of the cookie to use for sticky sessions for this backend."
                         type: string
-                middlewares:  
+                middlewares:
                   type: array
-                  description: List of Traefik Middleware references applied to the IngressRoute.
+                  description: Traefik Middleware references to attach to the IngressRoute.
                   items:
                     type: object
-                    required: [name]
+                    required: ["name"]
                     properties:
                       name:
+                        description: "Name of the middleware."
                         type: string
-                        description: Middleware name
                       namespace:
+                        description: "Namespace of the middleware. Defaults to the ExternalBalancer's namespace if not specified."
                         type: string
-                        description: Optional namespace; defaults to the IngressRoute's namespace.
             status:
               type: object
               properties:
                 observedGeneration:
+                  description: "The observed generation of the ExternalBalancer."
                   type: integer
                   format: int64
                 ready:
+                  description: "Whether the ExternalBalancer is ready."
                   type: boolean
                 servicesCreated:
+                  description: "Number of services created by the ExternalBalancer."
                   type: integer
                   format: int32
                 endpointsCreated:
+                  description: "Number of endpoints created by the ExternalBalancer."
                   type: integer
                   format: int32
                 conditions:
+                  description: "Conditions representing the current state of the ExternalBalancer."
                   type: array
                   items:
                     type: object

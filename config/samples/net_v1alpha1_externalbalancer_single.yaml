@@ -6,17 +6,32 @@ metadata:
 spec:
   strategy: SingleService
   ingressRouteLabels:
-    ingress-scope: internal
+    traefik.io/ingress-controller: edge-b
   host: radius-traefik.cdlan.net
   entryPoints: ["websecure"]
-  tlsSecretName: wildcard-cdlan-net
+  tls:
+    # Use an existing secret (easy mode):
+    secretName: wildcard-cdlan-net
+    # Or let cert-manager manage it:
+    # certManager:
+    #   secretName: provaui-tls
+    #   issuerRef:
+    #     name: letsencrypt-prod
+    #     kind: ClusterIssuer
+    #     group: cert-manager.io
+    #   duration: 2160h
+    #   renewBefore: 360h
   useEndpointSlice: true
+
+  middlewares:
+    - name: forward-auth
+      namespace: traefik
+    - name: secure-headers
+
   backends:
     - name: b1
       address: 10.129.33.191
       port: 9080
-      h2c: true
     - name: b2
       address: 10.129.33.192
       port: 9080
-      h2c: true

@@ -1,16 +1,6 @@
 # AI Agent Instructions for externalbalancer
 
-## Project Overview
-This is a Kubernetes operator that manages Traefik-based external load balancing using a Custom Resource Definition (CRD) called `ExternalBalancer`. The operator creates and manages Kubernetes and Traefik resources to implement load balancing strategies.
-
-## Key Architecture Points
-1. **Custom Resource Definition (CRD)**:
-   - Located in `config/crd/bases/net.futhwo.io_externalbalancers.yaml`
-   - Defines the `ExternalBalancer` spec with two strategies: `WeightedPerService` and `SingleService`
-   - API types defined in `api/v1alpha1/externalbalancer_types.go`
-
-````instructions
-# AI agent instructions — externalbalancer (concise reference)
+# AI agent instructions — extlb-operator (concise reference)
 
 Overview
 - This project is a Kubernetes operator that provisions Traefik resources for external load balancing using a CRD named `ExternalBalancer`.
@@ -54,6 +44,15 @@ Behavioral rules enforced in code
 How to extend safely
 - Add new fields to the API in `api/v1alpha1/*` and update the controller to populate resources; update `config/samples/`.
 - For Traefik features, prefer changing the unstructured spec builder and keep labels/annotations merged via `mergeMetadataLabels` / `mergeStringMap` helpers.
+
+Environment & requirements
+- Go >= 1.22, Kubernetes >= 1.26. Traefik CRDs must be installed in the cluster where samples are applied.
+
+Where to look for tests & checks
+- There are no unit tests here; run `go build ./...` and `go vet ./...` locally to catch compile issues after edits.
+
+If something is unclear or you need more detail (example CRs, sample payloads, or tests), say which area to expand.
+
 
 Environment & requirements
 - Go >= 1.22, Kubernetes >= 1.26. Traefik CRDs must be installed in the cluster where samples are applied.

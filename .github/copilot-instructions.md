@@ -9,53 +9,57 @@ This is a Kubernetes operator that manages Traefik-based external load balancing
    - Defines the `ExternalBalancer` spec with two strategies: `WeightedPerService` and `SingleService`
    - API types defined in `api/v1alpha1/externalbalancer_types.go`
 
-2. **Controller Logic**:
-   - Main reconciliation loop in `controllers/externalbalancer_controller.go`
-   - Manages lifecycle of dependent resources:
-     - Kubernetes Services and Endpoints/EndpointSlices
-     - Traefik IngressRoutes and TraefikServices (using unstructured.Unstructured)
+````instructions
+# AI agent instructions — extlb-operator (concise reference)
 
-## Key Development Patterns
-1. **Resource Management**:
-   - Uses controller-runtime's `CreateOrUpdate` pattern for Kubernetes resources
-   - Custom `createOrUpdateUnstructured` for Traefik CRDs to avoid dependency on Traefik types
-   - All resources are owned by the ExternalBalancer CR for garbage collection
+Overview
+- This project is a Kubernetes operator that provisions Traefik resources for external load balancing using a CRD named `ExternalBalancer`.
 
-2. **Strategy Implementation**:
-   - `WeightedPerService`: Creates per-backend Services + TraefikService with WRR
-   - `SingleService`: Creates single Service aggregating all backends
-   - See sample CRs in `config/samples/` for examples of each strategy
+Key files & entry points
+- `api/v1alpha1/externalbalancer_types.go` — CRD Go types and validation (Strategy, Backend, ServiceTemplate).
+- `controllers/externalbalancer_controller.go` — reconciliation logic: creates Services, Endpoints/EndpointSlices, Traefik `IngressRoute` and `TraefikService` (unstructured).
+- `config/crd/bases/net.futhwo.io_externalbalancers.yaml` — CRD manifest.
+- `config/samples/` — sample CRs for `WeightedPerService` and `SingleService`.
+- `Makefile` — convenient targets: `make run`, `make crd`, `make samples`.
 
-3. **Code Organization**:
-   - API types and validation in `api/v1alpha1/`
-   - Controller logic in `controllers/`
-   - CRD manifests in `config/crd/`
-   - RBAC rules in `config/rbac/`
+Quick dev commands (copyable)
+```
+# apply CRD
+make crd
 
-## Development Workflow
-1. **Local Development**:
-   ```bash
-   # Apply CRD to cluster
-   kubectl apply -f config/crd/bases/net.futhwo.io_externalbalancers.yaml
-   
-   # Run operator locally
-   go run ./main.go
-   
-   # Apply sample CR
-   kubectl apply -f config/samples/net_v1alpha1_externalbalancer_single.yaml
-   ```
+# run operator locally
+make run    # runs: GO111MODULE=on go run ./main.go
 
-2. **Requirements**:
-   - Go 1.22+
-   - Kubernetes 1.26+
-   - Traefik CRDs installed in cluster
+# apply sample CRs
+make samples
+```
 
-## Key Files for Understanding
-- `api/v1alpha1/externalbalancer_types.go` - Core API types and validation
-- `controllers/externalbalancer_controller.go` - Main reconciliation logic
-- `config/samples/*.yaml` - Example usage patterns
+Important project patterns (do not change lightly)
+- Uses controller-runtime `controllerutil.CreateOrUpdate` for typed K8s resources (Services, Endpoints, EndpointSlices).
+- Traefik CRDs are handled as `unstructured.Unstructured` via a local helper `createOrUpdateUnstructured(...)` in the controller — mutate the `obj.Object["spec"]` map inside that mutate function.
+- Controller sets owner references for K8s resources via `controllerutil.SetControllerReference(&eb, obj, r.Scheme)` so garbage collection works. Traefik unstructured objects are not `Owns()`-registered (so tests/changes should respect that).
+- Finalizer handling: `finalizerName = "externalbalancer.net.futhwo.io/finalizer"` is used; reconcile returns errors to requeue.
 
-## Project-Specific Conventions
-1. **Error Handling**: All errors from reconciliation are returned to trigger requeuing
-2. **Validation**: Port consistency is enforced for SingleService strategy
-3. **Labels**: IngressRoute-specific labels supported via `ingressRouteLabels` field
+Traefik specifics
+- Traefik resources created:
+  - TraefikService WRR named `fmt.Sprintf("%s-wrr", eb.Name)` for WeightedPerService.
+  - IngressRoute named `eb.Name` referencing either the WRR TraefikService or the Service (SingleService).
+- When editing Traefik payloads, modify the controller's mutate closures (search for `TraefikService` / `IngressRoute` blocks) and `schemaGVK(...)` helper.
+
+Behavioral rules enforced in code
+- `SingleService` requires all backends to share the same port — the controller validates and returns an error otherwise.
+- `UseEndpointSlice` toggles whether EndpointSlice or Endpoints are created.
+- H2C handling: backend `H2C` boolean adds AppProtocol `kubernetes.io/h2c` to ports if true.
+
+How to extend safely
+- Add new fields to the API in `api/v1alpha1/*` and update the controller to populate resources; update `config/samples/`.
+- For Traefik features, prefer changing the unstructured spec builder and keep labels/annotations merged via `mergeMetadataLabels` / `mergeStringMap` helpers.
+
+Environment & requirements
+- Go >= 1.22, Kubernetes >= 1.26. Traefik CRDs must be installed in the cluster where samples are applied.
+
+Where to look for tests & checks
+- There are no unit tests here; run `go build ./...` and `go vet ./...` locally to catch compile issues after edits.
+
+If something is unclear or you need more detail (example CRs, sample payloads, or tests), say which area to expand.
+````

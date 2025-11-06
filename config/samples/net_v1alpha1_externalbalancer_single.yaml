@@ -7,9 +7,9 @@ spec:
   strategy: SingleService
   ingressRouteLabels:
     traefik.io/ingress-controller: edge-b
-  host: radius-traefik.futhwo.net
+  host: radius-traefik.cdlan.net
   entryPoints: ["websecure"]
-  tlsSecretName: wildcard-futhwo-net
+  tlsSecretName: wildcard-cdlan-net
   useEndpointSlice: true
   backends:
     - name: b1

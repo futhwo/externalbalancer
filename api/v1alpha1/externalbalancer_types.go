@@ -19,6 +19,7 @@ type ServiceTemplate struct {
 }
 
 type Backend struct {
+	IngressRouteLabels map[string]string `json:"ingressRouteLabels,omitempty"`
 	Name             string `json:"name"`
 	Address          string `json:"address"` // IP or DNS
 	Port             int32  `json:"port"`

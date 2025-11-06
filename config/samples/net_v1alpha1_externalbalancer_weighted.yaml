@@ -2,14 +2,14 @@ apiVersion: net.futhwo.io/v1alpha1
 kind: ExternalBalancer
 metadata:
   name: provaui
-  namespace: default
+  namespace: test-ext-lb
 spec:
   strategy: WeightedPerService
   ingressRouteLabels:
-    traefik.io/ingress-controller: edge-a
-  host: radius-traefik.futhwo.net
+    ingress-scope: internal
+  host: radius-traefik.cdlan.net
   entryPoints: ["websecure"]
-  tlsSecretName: wildcard-futhwo-net
+  tlsSecretName: wildcard-cdlan-net
   stickyCookieName: lvl1
   useEndpointSlice: true
   backends:

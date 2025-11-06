@@ -48,6 +48,16 @@ type ExternalBalancerSpec struct {
 
 	// +kubebuilder:validation:MinItems=1
 	Backends []Backend `json:"backends"`
+
+	// Middlewares to apply to the IngressRoute's route.
+	// Each item refers to an existing Traefik Middleware.
+	Middlewares []MiddlewareRef `json:"middlewares,omitempty"`
+}
+
+// MiddlewareRef references an existing Traefik Middleware by name/namespace.
+type MiddlewareRef struct {
+    Name      string `json:"name"`
+    Namespace string `json:"namespace,omitempty"`
 }
 
 type ExternalBalancerStatus struct {
@@ -137,6 +147,10 @@ func (in *ExternalBalancerSpec) DeepCopyInto(out *ExternalBalancerSpec) {
 			in.Backends[i].DeepCopyInto(&out.Backends[i])
 		}
 	}
+	if in.Middlewares != nil {
+		out.Middlewares = make([]MiddlewareRef, len(in.Middlewares))
+		copy(out.Middlewares, in.Middlewares)
+	}
 }
 func (in *ExternalBalancerSpec) DeepCopy() *ExternalBalancerSpec {
 	if in == nil {
@@ -203,3 +217,12 @@ func (in *ExternalBalancerList) DeepCopy() *ExternalBalancerList {
 	return out
 }
 func (in *ExternalBalancerList) DeepCopyObject() runtime.Object { return in.DeepCopy() }
+
+// DeepCopy for MiddlewareRef (trivial, value type)
+func (in *MiddlewareRef) DeepCopyInto(out *MiddlewareRef) { *out = *in }
+func (in *MiddlewareRef) DeepCopy() *MiddlewareRef {
+    if in == nil { return nil }
+    out := new(MiddlewareRef)
+    *out = *in
+    return out
+}

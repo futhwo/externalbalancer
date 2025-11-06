@@ -190,6 +190,10 @@ func (r *ExternalBalancerReconciler) Reconcile(ctx ccontext.Context, req ctrl.Re
 				"priority": 1,
 				"services": []any{map[string]any{"kind": "TraefikService", "name": wrrName}},
 			}
+			mw := buildMiddlewaresArray(&eb)
+			if len(mw) > 0 {
+				route["middlewares"] = mw
+			}
 			obj.Object["spec"] = map[string]any{
 				"entryPoints": eb.Spec.EntryPoints,
 				"routes":      []any{route},
@@ -287,6 +291,10 @@ func (r *ExternalBalancerReconciler) Reconcile(ctx ccontext.Context, req ctrl.Re
 				"match":    fmt.Sprintf("Host(`%s`)", eb.Spec.Host),
 				"priority": 1,
 				"services": []any{map[string]any{"kind": "Service", "name": svcName, "port": commonPort}},
+			}
+			mw := buildMiddlewaresArray(&eb)
+			if len(mw) > 0 {
+				route["middlewares"] = mw
 			}
 			obj.Object["spec"] = map[string]any{
 				"entryPoints": eb.Spec.EntryPoints,
@@ -389,4 +397,20 @@ func mergeMetadataLabels(obj *unstructured.Unstructured, labels map[string]strin
 	for k, v := range labels {
 		lbl[k] = v
 	}
+}
+
+// buildMiddlewaresArray converts eb.Spec.Middlewares to the unstructured form expected by Traefik.
+func buildMiddlewaresArray(eb *netv1alpha1.ExternalBalancer) []any {
+    if len(eb.Spec.Middlewares) == 0 {
+        return nil
+    }
+    out := make([]any, 0, len(eb.Spec.Middlewares))
+    for _, m := range eb.Spec.Middlewares {
+        item := map[string]any{"name": m.Name}
+        if m.Namespace != "" {
+            item["namespace"] = m.Namespace
+        }
+        out = append(out, item)
+    }
+    return out
 }

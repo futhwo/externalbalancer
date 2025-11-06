@@ -75,6 +75,19 @@ spec:
                         type: boolean
                       stickyCookieName:
                         type: string
+                middlewares:  
+                  type: array
+                  description: List of Traefik Middleware references applied to the IngressRoute.
+                  items:
+                    type: object
+                    required: [name]
+                    properties:
+                      name:
+                        type: string
+                        description: Middleware name
+                      namespace:
+                        type: string
+                        description: Optional namespace; defaults to the IngressRoute's namespace.
             status:
               type: object
               properties:

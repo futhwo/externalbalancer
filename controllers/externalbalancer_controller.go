@@ -155,7 +155,7 @@ func (r *ExternalBalancerReconciler) Reconcile(ctx ccontext.Context, req ctrl.Re
 				if b.Weight != nil {
 					w = int(*b.Weight)
 				}
-				item = map[string]any{
+				item := map[string]any{
 					"name": b.Name,
 					"kind": "Service",
 					"port": b.Port,

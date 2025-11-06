@@ -5,14 +5,14 @@ import (
 	"fmt"
 	"sort"
 
-	netv1alpha1 "github.com/futhwo/externalbalancer/api/v1alpha1"
+	netv1alpha1 "github.com/futhwi/externalbalancer/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -21,7 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-const finalizerName = "externalbalancer.net.futhwo.io/finalizer"
+const finalizerName = "externalbalancer.net.cdlan.io/finalizer"
 
 type ExternalBalancerReconciler struct {
 	client.Client
@@ -29,8 +29,8 @@ type ExternalBalancerReconciler struct {
 }
 
 // RBAC
-// +kubebuilder:rbac:groups=net.futhwo.io,resources=externalbalancers,verbs=get;list;watch;update;patch
-// +kubebuilder:rbac:groups=net.futhwo.io,resources=externalbalancers/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=net.cdlan.io,resources=externalbalancers,verbs=get;list;watch;update;patch
+// +kubebuilder:rbac:groups=net.cdlan.io,resources=externalbalancers/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups="",resources=services;endpoints,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="discovery.k8s.io",resources=endpointslices,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="traefik.io",resources=ingressroutes;traefikservices,verbs=get;list;watch;create;update;patch;delete
@@ -67,7 +67,6 @@ func (r *ExternalBalancerReconciler) Reconcile(ctx ccontext.Context, req ctrl.Re
 
 	switch strategy {
 	case netv1alpha1.StrategyWeightedPerService:
-		// Per-backend Service + EndpointSlice/Endpoints
 		for _, b := range eb.Spec.Backends {
 			// Service (no selector)
 			svc := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: b.Name, Namespace: eb.Namespace}}
@@ -106,7 +105,7 @@ func (r *ExternalBalancerReconciler) Reconcile(ctx ccontext.Context, req ctrl.Re
 				_, err = controllerutil.CreateOrUpdate(ctx, r.Client, es, func() error {
 					es.AddressType = discoveryv1.AddressTypeIPv4
 					portNum := int32(b.Port)
-					ap := (*string)(nil)
+					var ap *string
 					if b.H2C {
 						v := "kubernetes.io/h2c"
 						ap = &v
@@ -123,7 +122,7 @@ func (r *ExternalBalancerReconciler) Reconcile(ctx ccontext.Context, req ctrl.Re
 			} else {
 				ep := &corev1.Endpoints{ObjectMeta: metav1.ObjectMeta{Name: b.Name, Namespace: eb.Namespace}}
 				_, err = controllerutil.CreateOrUpdate(ctx, r.Client, ep, func() error {
-					ap := (*string)(nil)
+					var ap *string
 					if b.H2C {
 						v := "kubernetes.io/h2c"
 						ap = &v
@@ -131,8 +130,8 @@ func (r *ExternalBalancerReconciler) Reconcile(ctx ccontext.Context, req ctrl.Re
 					ep.Subsets = []corev1.EndpointSubset{{
 						Addresses: []corev1.EndpointAddress{{IP: b.Address}},
 						Ports: []corev1.EndpointPort{{
-							Port:       int32(b.Port),
-							Protocol:   corev1.ProtocolTCP,
+							Port:        int32(b.Port),
+							Protocol:    corev1.ProtocolTCP,
 							AppProtocol: ap,
 						}},
 					}}
@@ -143,46 +142,34 @@ func (r *ExternalBalancerReconciler) Reconcile(ctx ccontext.Context, req ctrl.Re
 			createdEps++
 		}
 
-		// TraefikService (WRR)
-		// Build spec as unstructured
+		// TraefikService (WRR) via unstructured
 		wrrName := fmt.Sprintf("%s-wrr", eb.Name)
 		ts := &unstructured.Unstructured{}
-		ts.SetGroupVersionKind(schemaGVK("traefik.io", "v1alpha1", "TraefikService"))
+		ts.SetGroupVersionKind(schema.GroupVersionKind{Group: "traefik.io", Version: "v1alpha1", Kind: "TraefikService"})
 		ts.SetName(wrrName)
 		ts.SetNamespace(eb.Namespace)
 		_, err := createOrUpdateUnstructured(ctx, r.Client, ts, func(obj *unstructured.Unstructured) error {
-			// Build weighted.services list
 			var services []map[string]any
 			for _, b := range eb.Spec.Backends {
 				w := 1
 				if b.Weight != nil {
 					w = int(*b.Weight)
 				}
-				item := map[string]any{
+				item = map[string]any{
 					"name": b.Name,
 					"kind": "Service",
 					"port": b.Port,
 					"weight": w,
 				}
 				if b.StickyCookieName != "" {
-					item["sticky"] = map[string]any{
-						"cookie": map[string]any{"name": b.StickyCookieName},
-					}
+					item["sticky"] = map[string]any{"cookie": map[string]any{"name": b.StickyCookieName}}
 				}
 				services = append(services, item)
 			}
-			sort.SliceStable(services, func(i, j int) bool {
-				return services[i]["name"].(string) < services[j]["name"].(string)
-			})
-			spec := map[string]any{
-				"weighted": map[string]any{
-					"services": services,
-				},
-			}
+			sort.SliceStable(services, func(i, j int) bool { return services[i]["name"].(string) < services[j]["name"].(string) })
+			spec := map[string]any{"weighted": map[string]any{"services": services}}
 			if eb.Spec.StickyCookieName != "" {
-				spec["weighted"].(map[string]any)["sticky"] = map[string]any{
-					"cookie": map[string]any{"name": eb.Spec.StickyCookieName},
-				}
+				spec["weighted"].(map[string]any)["sticky"] = map[string]any{"cookie": map[string]any{"name": eb.Spec.StickyCookieName}}
 			}
 			obj.Object["spec"] = spec
 			return controllerutil.SetControllerReference(&eb, obj, r.Scheme)
@@ -191,30 +178,21 @@ func (r *ExternalBalancerReconciler) Reconcile(ctx ccontext.Context, req ctrl.Re
 
 		// IngressRoute -> TraefikService
 		ir := &unstructured.Unstructured{}
-		ir.SetGroupVersionKind(schemaGVK("traefik.io", "v1alpha1", "IngressRoute"))
+		ir.SetGroupVersionKind(schema.GroupVersionKind{Group: "traefik.io", Version: "v1alpha1", Kind: "IngressRoute"})
 		ir.SetName(eb.Name)
 		ir.SetNamespace(eb.Namespace)
 		_, err = createOrUpdateUnstructured(ctx, r.Client, ir, func(obj *unstructured.Unstructured) error {
-			// labels only here
 			mergeMetadataLabels(obj, eb.Spec.IngressRouteLabels)
-
 			route := map[string]any{
 				"kind":     "Rule",
 				"match":    fmt.Sprintf("Host(`%s`)", eb.Spec.Host),
 				"priority": 1,
-				"services": []any{
-					map[string]any{
-						"kind": "TraefikService",
-						"name": fmt.Sprintf("%s-wrr", eb.Name),
-					},
-				},
+				"services": []any{map[string]any{"kind": "TraefikService", "name": wrrName}},
 			}
 			obj.Object["spec"] = map[string]any{
 				"entryPoints": eb.Spec.EntryPoints,
 				"routes":      []any{route},
-				"tls": map[string]any{
-					"secretName": eb.Spec.TlsSecretName,
-				},
+				"tls":         map[string]any{"secretName": eb.Spec.TlsSecretName},
 			}
 			return controllerutil.SetControllerReference(&eb, obj, r.Scheme)
 		})
@@ -236,7 +214,7 @@ func (r *ExternalBalancerReconciler) Reconcile(ctx ccontext.Context, req ctrl.Re
 			mergeStringMap(&svc.Labels, eb.Spec.ServiceTemplate.Labels)
 			mergeStringMap(&svc.Annotations, eb.Spec.ServiceTemplate.Annotations)
 			svc.Spec.Selector = nil
-			ap := (*string)(nil)
+			var ap *string
 			for _, b := range eb.Spec.Backends {
 				if b.H2C {
 					v := "kubernetes.io/h2c"
@@ -245,9 +223,9 @@ func (r *ExternalBalancerReconciler) Reconcile(ctx ccontext.Context, req ctrl.Re
 				}
 			}
 			svc.Spec.Ports = []corev1.ServicePort{{
-				Port:       commonPort,
-				TargetPort: intstr.FromInt(int(commonPort)),
-				Protocol:   corev1.ProtocolTCP,
+				Port:        commonPort,
+				TargetPort:  intstr.FromInt(int(commonPort)),
+				Protocol:    corev1.ProtocolTCP,
 				AppProtocol: ap,
 			}}
 			return controllerutil.SetControllerReference(&eb, svc, r.Scheme)
@@ -284,10 +262,7 @@ func (r *ExternalBalancerReconciler) Reconcile(ctx ccontext.Context, req ctrl.Re
 			ep := &corev1.Endpoints{ObjectMeta: metav1.ObjectMeta{Name: svcName, Namespace: eb.Namespace}}
 			_, err = controllerutil.CreateOrUpdate(ctx, r.Client, ep, func() error {
 				sub := corev1.EndpointSubset{
-					Ports: []corev1.EndpointPort{{
-						Port: int32(commonPort),
-						Protocol: corev1.ProtocolTCP,
-					}},
+					Ports: []corev1.EndpointPort{{Port: int32(commonPort), Protocol: corev1.ProtocolTCP}},
 				}
 				for _, b := range eb.Spec.Backends {
 					sub.Addresses = append(sub.Addresses, corev1.EndpointAddress{IP: b.Address})
@@ -299,9 +274,9 @@ func (r *ExternalBalancerReconciler) Reconcile(ctx ccontext.Context, req ctrl.Re
 		}
 		createdEps++
 
-		// IngressRoute -> Service directly
+		// IngressRoute -> Service
 		ir := &unstructured.Unstructured{}
-		ir.SetGroupVersionKind(schemaGVK("traefik.io", "v1alpha1", "IngressRoute"))
+		ir.SetGroupVersionKind(schema.GroupVersionKind{Group: "traefik.io", Version: "v1alpha1", Kind: "IngressRoute"})
 		ir.SetName(eb.Name)
 		ir.SetNamespace(eb.Namespace)
 		_, err = createOrUpdateUnstructured(ctx, r.Client, ir, func(obj *unstructured.Unstructured) error {
@@ -310,20 +285,12 @@ func (r *ExternalBalancerReconciler) Reconcile(ctx ccontext.Context, req ctrl.Re
 				"kind":     "Rule",
 				"match":    fmt.Sprintf("Host(`%s`)", eb.Spec.Host),
 				"priority": 1,
-				"services": []any{
-					map[string]any{
-						"kind": "Service",
-						"name": svcName,
-						"port": commonPort,
-					},
-				},
+				"services": []any{map[string]any{"kind": "Service", "name": svcName, "port": commonPort}},
 			}
 			obj.Object["spec"] = map[string]any{
 				"entryPoints": eb.Spec.EntryPoints,
 				"routes":      []any{route},
-				"tls": map[string]any{
-					"secretName": eb.Spec.TlsSecretName,
-				},
+				"tls":         map[string]any{"secretName": eb.Spec.TlsSecretName},
 			}
 			return controllerutil.SetControllerReference(&eb, obj, r.Scheme)
 		})
@@ -350,7 +317,6 @@ func (r *ExternalBalancerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&corev1.Service{}).
 		Owns(&corev1.Endpoints{}).
 		Owns(&discoveryv1.EndpointSlice{}).
-		// Traefik resources are unstructured, so we don't Own() them here.
 		Complete(r)
 }
 
@@ -366,10 +332,6 @@ func mergeStringMap(dst *map[string]string, src map[string]string) {
 	}
 }
 
-func schemaGVK(group, version, kind string) schema.GroupVersionKind {
-	return schema.GroupVersionKind{Group: group, Version: version, Kind: kind}
-}
-
 // createOrUpdateUnstructured provides a minimal "create or update" for unstructured objects.
 func createOrUpdateUnstructured(ctx ccontext.Context, c client.Client, obj *unstructured.Unstructured, mutate func(*unstructured.Unstructured) error) (controllerutil.OperationResult, error) {
 	key := types.NamespacedName{Name: obj.GetName(), Namespace: obj.GetNamespace()}
@@ -379,7 +341,6 @@ func createOrUpdateUnstructured(ctx ccontext.Context, c client.Client, obj *unst
 	err := c.Get(ctx, key, existing)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			// create
 			if err := mutate(obj); err != nil {
 				return controllerutil.OperationResultNone, err
 			}
@@ -395,9 +356,7 @@ func createOrUpdateUnstructured(ctx ccontext.Context, c client.Client, obj *unst
 	obj.SetResourceVersion(existing.GetResourceVersion())
 	obj.SetUID(existing.GetUID())
 	obj.SetCreationTimestamp(existing.GetCreationTimestamp())
-	obj.SetManagedFields(nil) // avoid immutable fields noise
-	obj.SetLabels(existing.GetLabels())
-	obj.SetAnnotations(existing.GetAnnotations())
+	obj.SetManagedFields(nil)
 
 	if err := mutate(obj); err != nil {
 		return controllerutil.OperationResultNone, err

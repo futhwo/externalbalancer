@@ -1,4 +1,4 @@
-# AI Agent Instructions for extlb-operator
+# AI Agent Instructions for externalbalancer
 
 ## Project Overview
 This is a Kubernetes operator that manages Traefik-based external load balancing using a Custom Resource Definition (CRD) called `ExternalBalancer`. The operator creates and manages Kubernetes and Traefik resources to implement load balancing strategies.
@@ -10,7 +10,7 @@ This is a Kubernetes operator that manages Traefik-based external load balancing
    - API types defined in `api/v1alpha1/externalbalancer_types.go`
 
 ````instructions
-# AI agent instructions — extlb-operator (concise reference)
+# AI agent instructions — externalbalancer (concise reference)
 
 Overview
 - This project is a Kubernetes operator that provisions Traefik resources for external load balancing using a CRD named `ExternalBalancer`.

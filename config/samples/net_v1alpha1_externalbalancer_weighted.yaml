@@ -1,4 +1,4 @@
-apiVersion: net.futhwo.io/v1alpha1
+apiVersion: net.cdlan.io/v1alpha1
 kind: ExternalBalancer
 metadata:
   name: provaui
@@ -7,20 +7,20 @@ spec:
   strategy: WeightedPerService
   ingressRouteLabels:
     traefik.io/ingress-controller: edge-a
-  host: site.mydomain.com
+  host: radius-traefik.cdlan.net
   entryPoints: ["websecure"]
-  tlsSecretName: wildcard-mydomain-com
+  tlsSecretName: wildcard-cdlan-net
   stickyCookieName: lvl1
   useEndpointSlice: true
   backends:
     - name: provaui-1
-      address: 10.11.12.191
+      address: 10.129.33.191
       port: 9080
       weight: 1
       h2c: true
       stickyCookieName: lvl2
     - name: provaui-2
-      address: 10.11.12.192
+      address: 10.129.33.192
       port: 9080
       weight: 1
       h2c: true

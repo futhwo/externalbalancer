@@ -4,8 +4,8 @@ import (
 	"flag"
 	"os"
 
-	netv1alpha1 "github.com/futhwo/externalbalancer/api/v1alpha1"
-	"github.com/futhwo/externalbalancer/controllers"
+	netv1alpha1 "github.com/futhwi/externalbalancer/api/v1alpha1"
+	"github.com/futhwi/externalbalancer/controllers"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -26,7 +26,6 @@ func init() {
 	utilruntime.Must(corev1.AddToScheme(scheme))
 	utilruntime.Must(discoveryv1.AddToScheme(scheme))
 	utilruntime.Must(netv1alpha1.AddToScheme(scheme))
-	// traefik CRDs are handled via unstructured, so no scheme registration needed
 }
 
 func main() {
@@ -47,7 +46,7 @@ func main() {
 		MetricsBindAddress:     metricsAddr,
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
-		LeaderElectionID:       "extlb-operator.futhwo.it",
+		LeaderElectionID:       "externalbalancer.cdlan.net",
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")

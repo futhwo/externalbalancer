@@ -1,7 +1,7 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: extlb-operator
+  name: externalbalancer
 rules:
 - apiGroups: [""]
   resources: ["services","endpoints"]
@@ -12,6 +12,6 @@ rules:
 - apiGroups: ["traefik.io"]
   resources: ["ingressroutes","traefikservices"]
   verbs: ["get","list","watch","create","update","patch","delete"]
-- apiGroups: ["net.futhwo.io"]
+- apiGroups: ["net.cdlan.io"]
   resources: ["externalbalancers","externalbalancers/status"]
   verbs: ["get","list","watch","update","patch"]

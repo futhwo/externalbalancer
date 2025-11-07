@@ -13,7 +13,8 @@ It supports two strategies:
   and an IngressRoute pointing directly to the Service. No TraefikService and no stickiness.
 
 It also supports **IngressRoute-only labels** (for selecting a specific Traefik instance that
-watches only IngressRoutes with certain labels).
+watches only IngressRoutes with certain labels) and **Middlewares** (they must exist yet, their definition 
+is out fo the scope of the operator)
 
 > NOTE: For simplicity and portability, this project manages Traefik CRDs (**IngressRoute** and
 > **TraefikService**) using `unstructured.Unstructured`, so you don't need to pull in Traefik's Go types.
@@ -46,5 +47,5 @@ See `config/crd/bases/net.futhwo.io_externalbalancers.yaml`.
 ## Notes
 
 - When `strategy: SingleService`, the operator validates that all backends share the same port.
-- `ingressRouteLabels` are applied **only** to the IngressRoute object.
+- `ingressRouteLabels` are applied **only** to the IngressRoute and TraefikService objects.
 - Use `useEndpointSlice: true` when possible (scales better and supports DNS addresses cleanly).

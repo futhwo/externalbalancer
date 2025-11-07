@@ -1,4 +1,4 @@
-externalbalancer# externalbalancer-operator
+# externalbalancer-operator
 
 An example Kubernetes operator that automates Traefik-based external load-balancing
 using a single Custom Resource: **ExternalBalancer**.

@@ -7,11 +7,11 @@ spec:
   strategy: SingleService
   ingressRouteLabels:
     traefik.io/ingress-controller: edge-b
-  host: radius-traefik.cdlan.net
+  host: extlb-weighted.futhwo.it
   entryPoints: ["websecure"]
   tls:
     # Use an existing secret (easy mode):
-    secretName: wildcard-cdlan-net
+    secretName: wildcard-futhwo-it
     # Or let cert-manager manage it:
     # certManager:
     #   secretName: provaui-tls
@@ -30,8 +30,8 @@ spec:
 
   backends:
     - name: b1
-      address: 10.129.33.191
+      address: 10.11.12.15
       port: 9080
     - name: b2
-      address: 10.129.33.192
+      address: 10.11.12.16
       port: 9080

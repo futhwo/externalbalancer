@@ -7,20 +7,20 @@ spec:
   strategy: WeightedPerService
   ingressRouteLabels:
     ingress-scope: internal
-  host: radius-traefik.cdlan.net
+  host: extlb-simple.futhwo.it
   entryPoints: ["websecure"]
-  tlsSecretName: wildcard-cdlan-net
+  tlsSecretName: wildcard-futhwo-it
   stickyCookieName: lvl1
   useEndpointSlice: true
   backends:
     - name: provaui-1
-      address: 10.129.33.191
+      address: 10.11.12.13
       port: 9080
       weight: 1
       h2c: true
       stickyCookieName: lvl2
     - name: provaui-2
-      address: 10.129.33.192
+      address: 10.11.12.14
       port: 9080
       weight: 1
       h2c: true

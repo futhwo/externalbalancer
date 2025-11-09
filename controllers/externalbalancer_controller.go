@@ -110,9 +110,19 @@ func (r *ExternalBalancerReconciler) Reconcile(ctx ccontext.Context, req ctrl.Re
 				"dnsNames":   []any{eb.Spec.Host},
 				"issuerRef":  map[string]any{"name": cm.IssuerRef.Name, "kind": issuerKind, "group": issuerGroup},
 			}
-			if cm.Duration != nil { spec["duration"] = cm.Duration.Duration.String() }
-			if cm.RenewBefore != nil { spec["renewBefore"] = cm.RenewBefore.Duration.String() }
-			if len(cm.Usages) > 0 { arr := make([]any, 0, len(cm.Usages)); for _, u := range cm.Usages { arr = append(arr, u) }; spec["usages"] = arr }
+			if cm.Duration != nil {
+				spec["duration"] = cm.Duration.Duration.String()
+			}
+			if cm.RenewBefore != nil {
+				spec["renewBefore"] = cm.RenewBefore.Duration.String()
+			}
+			if len(cm.Usages) > 0 {
+				arr := make([]any, 0, len(cm.Usages))
+				for _, u := range cm.Usages {
+					arr = append(arr, u)
+				}
+				spec["usages"] = arr
+			}
 			o.Object["spec"] = spec
 			return controllerutil.SetControllerReference(eb, o, r.Scheme)
 		})
@@ -149,7 +159,9 @@ func (r *ExternalBalancerReconciler) Reconcile(ctx ccontext.Context, req ctrl.Re
 				}}
 				return controllerutil.SetControllerReference(&eb, svc, r.Scheme)
 			})
-			if err != nil { return ctrl.Result{}, err }
+			if err != nil {
+				return ctrl.Result{}, err
+			}
 			createdSvcs++
 
 			// Endpoints or EndpointSlice
@@ -179,7 +191,9 @@ func (r *ExternalBalancerReconciler) Reconcile(ctx ccontext.Context, req ctrl.Re
 					}}
 					return controllerutil.SetControllerReference(&eb, es, r.Scheme)
 				})
-				if err != nil { return ctrl.Result{}, err }
+				if err != nil {
+					return ctrl.Result{}, err
+				}
 			} else {
 				ep := &corev1.Endpoints{ObjectMeta: metav1.ObjectMeta{Name: b.Name, Namespace: eb.Namespace}}
 				_, err = controllerutil.CreateOrUpdate(ctx, r.Client, ep, func() error {
@@ -198,7 +212,9 @@ func (r *ExternalBalancerReconciler) Reconcile(ctx ccontext.Context, req ctrl.Re
 					}}
 					return controllerutil.SetControllerReference(&eb, ep, r.Scheme)
 				})
-				if err != nil { return ctrl.Result{}, err }
+				if err != nil {
+					return ctrl.Result{}, err
+				}
 			}
 			createdEps++
 		}
@@ -235,11 +251,15 @@ func (r *ExternalBalancerReconciler) Reconcile(ctx ccontext.Context, req ctrl.Re
 			obj.Object["spec"] = spec
 			return controllerutil.SetControllerReference(&eb, obj, r.Scheme)
 		})
-		if err != nil { return ctrl.Result{}, err }
+		if err != nil {
+			return ctrl.Result{}, err
+		}
 
 		// IngressRoute -> TraefikService
 		tlsSecretName, err := ensureTLS(ctx, &eb)
-		if err != nil { return ctrl.Result{}, err }
+		if err != nil {
+			return ctrl.Result{}, err
+		}
 		mw := buildMiddlewaresArray(&eb)
 		ir := &unstructured.Unstructured{}
 		ir.SetGroupVersionKind(schema.GroupVersionKind{Group: "traefik.io", Version: "v1alpha1", Kind: "IngressRoute"})
@@ -268,7 +288,9 @@ func (r *ExternalBalancerReconciler) Reconcile(ctx ccontext.Context, req ctrl.Re
 			}
 			return controllerutil.SetControllerReference(&eb, obj, r.Scheme)
 		})
-		if err != nil { return ctrl.Result{}, err }
+		if err != nil {
+			return ctrl.Result{}, err
+		}
 
 	case netv1alpha1.StrategySingleService:
 		// Validate same port across backends
@@ -302,7 +324,9 @@ func (r *ExternalBalancerReconciler) Reconcile(ctx ccontext.Context, req ctrl.Re
 			}}
 			return controllerutil.SetControllerReference(&eb, svc, r.Scheme)
 		})
-		if err != nil { return ctrl.Result{}, err }
+		if err != nil {
+			return ctrl.Result{}, err
+		}
 		createdSvcs++
 
 		// Aggregate endpoints
@@ -329,7 +353,9 @@ func (r *ExternalBalancerReconciler) Reconcile(ctx ccontext.Context, req ctrl.Re
 				es.Endpoints = eps
 				return controllerutil.SetControllerReference(&eb, es, r.Scheme)
 			})
-			if err != nil { return ctrl.Result{}, err }
+			if err != nil {
+				return ctrl.Result{}, err
+			}
 		} else {
 			ep := &corev1.Endpoints{ObjectMeta: metav1.ObjectMeta{Name: svcName, Namespace: eb.Namespace}}
 			_, err = controllerutil.CreateOrUpdate(ctx, r.Client, ep, func() error {
@@ -342,13 +368,17 @@ func (r *ExternalBalancerReconciler) Reconcile(ctx ccontext.Context, req ctrl.Re
 				ep.Subsets = []corev1.EndpointSubset{sub}
 				return controllerutil.SetControllerReference(&eb, ep, r.Scheme)
 			})
-			if err != nil { return ctrl.Result{}, err }
+			if err != nil {
+				return ctrl.Result{}, err
+			}
 		}
 		createdEps++
 
 		// IngressRoute -> Service
 		tlsSecretName, err := ensureTLS(ctx, &eb)
-		if err != nil { return ctrl.Result{}, err }
+		if err != nil {
+			return ctrl.Result{}, err
+		}
 		mw := buildMiddlewaresArray(&eb)
 		ir := &unstructured.Unstructured{}
 		ir.SetGroupVersionKind(schema.GroupVersionKind{Group: "traefik.io", Version: "v1alpha1", Kind: "IngressRoute"})
@@ -372,7 +402,9 @@ func (r *ExternalBalancerReconciler) Reconcile(ctx ccontext.Context, req ctrl.Re
 			}
 			return controllerutil.SetControllerReference(&eb, obj, r.Scheme)
 		})
-		if err != nil { return ctrl.Result{}, err }
+		if err != nil {
+			return ctrl.Result{}, err
+		}
 	default:
 		return ctrl.Result{}, fmt.Errorf("unknown strategy %q", strategy)
 	}

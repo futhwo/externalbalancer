@@ -1,0 +1,15 @@
+{{- define "externalbalancer-operator.name" -}}
+{{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" -}}
+{{- end }}
+
+{{- define "externalbalancer-operator.fullname" -}}
+{{- if .Values.fullnameOverride }}
+{{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
+{{- else }}
+{{- printf "%s" (include "externalbalancer-operator.name" .) | trunc 63 | trimSuffix "-" }}
+{{- end }}
+{{- end }}
+
+{{- define "externalbalancer-operator.namespace" -}}
+{{- if .Values.namespace }}{{ .Values.namespace }}{{ else }}{{ .Release.Namespace }}{{ end }}
+{{- end }}

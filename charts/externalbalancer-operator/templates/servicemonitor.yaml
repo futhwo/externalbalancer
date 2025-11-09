@@ -1,0 +1,23 @@
+{{- if and .Values.metrics.enabled .Values.metrics.serviceMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "externalbalancer-operator.fullname" . }}
+  namespace: {{ include "externalbalancer-operator.namespace" . }}
+  labels:
+    app: {{ include "externalbalancer-operator.fullname" . }}
+    {{- with .Values.metrics.serviceMonitor.additionalLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  selector:
+    matchLabels:
+      app: {{ include "externalbalancer-operator.fullname" . }}
+  namespaceSelector:
+    matchNames:
+      - {{ include "externalbalancer-operator.namespace" . }}
+  endpoints:
+    - port: http-metrics
+      interval: {{ .Values.metrics.serviceMonitor.interval }}
+      path: /metrics
+{{- end }}

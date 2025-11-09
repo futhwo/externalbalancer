@@ -1,0 +1,17 @@
+{{- if and .Values.metrics.enabled .Values.metrics.service.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "externalbalancer-operator.fullname" . }}-metrics
+  namespace: {{ include "externalbalancer-operator.namespace" . }}
+  labels:
+    app: {{ include "externalbalancer-operator.fullname" . }}
+spec:
+  selector:
+    app: {{ include "externalbalancer-operator.fullname" . }}
+  ports:
+    - name: http-metrics
+      port: {{ .Values.metrics.port }}
+      targetPort: metrics
+      protocol: TCP
+{{- end }}

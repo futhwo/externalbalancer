@@ -1,0 +1,49 @@
+image:
+  repository: ghcr.io/futhwo/externalbalancer
+  tag: ""                # if empty, uses .Chart.AppVersion
+  pullPolicy: IfNotPresent
+
+nameOverride: ""
+fullnameOverride: ""
+
+# Namespace where the operator runs.
+# If empty, use release namespace.
+namespace: ""
+
+rbac:
+  create: true
+
+serviceAccount:
+  create: true
+  name: ""
+
+leaderElection:
+  enabled: true
+
+metrics:
+  enabled: true
+  port: 8080
+  service:
+    enabled: true
+    annotations: {}
+  serviceMonitor:
+    enabled: true
+    interval: 30s
+    additionalLabels:
+      # match your Prometheus .spec.serviceMonitorSelector.matchLabels
+      release: prometheus
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+
+# Extra labels on Deployment / Pods
+podLabels: {}
+
+# For clusters without cert-manager you can just use tls.secretName in CRs
+certManager:
+  enabled: true

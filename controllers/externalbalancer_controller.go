@@ -114,7 +114,7 @@ func (r *ExternalBalancerReconciler) Reconcile(ctx ccontext.Context, req ctrl.Re
 			if cm.RenewBefore != nil { spec["renewBefore"] = cm.RenewBefore.Duration.String() }
 			if len(cm.Usages) > 0 { arr := make([]any, 0, len(cm.Usages)); for _, u := range cm.Usages { arr = append(arr, u) }; spec["usages"] = arr }
 			o.Object["spec"] = spec
-			return controllerutil.SetControllerReference(&eb, o, r.Scheme)
+			return controllerutil.SetControllerReference(eb, o, r.Scheme)
 		})
 		return secName, err
 	}

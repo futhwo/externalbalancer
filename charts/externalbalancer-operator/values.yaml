@@ -1,5 +1,5 @@
 image:
-  repository: ghcr.io/futhwo/externalbalancer
+  repository: ghcr.io/futhwo/externalbalancer/externalbalancer-operator
   tag: ""                # if empty, uses .Chart.AppVersion
   pullPolicy: IfNotPresent
 
@@ -44,6 +44,3 @@ resources:
 # Extra labels on Deployment / Pods
 podLabels: {}
 
-# For clusters without cert-manager you can just use tls.secretName in CRs
-certManager:
-  enabled: true

@@ -19,6 +19,13 @@ is out fo the scope of the operator)
 > NOTE: For simplicity and portability, this project manages Traefik CRDs (**IngressRoute** and
 > **TraefikService**) using `unstructured.Unstructured`, so you don't need to pull in Traefik's Go types.
 
+## Install using helm
+```shell
+helm repo add externalbalancer https://futhwo.github.io/externalbalancer
+helm repo update
+helm install my-extlb externalbalancer/externalbalancer-operator
+```
+
 ## Quick start (developer workflow)
 
 - Make sure you have Go 1.22+ and Kubernetes 1.26+.
@@ -32,8 +39,6 @@ is out fo the scope of the operator)
   ```bash
   go run ./main.go
   ```
-  Or build a container, push, and run it in-cluster with an RBAC and Deployment (left as an exercise).
-
 - Apply sample CRs (choose one):
   ```bash
   kubectl apply -f config/samples/net_v1alpha1_externalbalancer_weighted.yaml

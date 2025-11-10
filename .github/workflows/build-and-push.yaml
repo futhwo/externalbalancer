@@ -36,20 +36,24 @@ jobs:
       - name: Compute tags
         id: vars
         run: |
-          # default tag from sha
-          TAG_SHA=${GITHUB_SHA::7}
-          echo "tag_sha=${TAG_SHA}" >> $GITHUB_OUTPUT
+          IMAGE="${{ env.IMAGE_NAME }}"
 
-          # if tag push like v0.1.0, use that
+          # Always tag with short SHA
+          TAGS="${IMAGE}:${GITHUB_SHA::7}"
+
+          # If this is a tag like v0.1.1, also tag with that
           if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
             VERSION_TAG="${GITHUB_REF#refs/tags/}"
-            echo "tag_version=${VERSION_TAG}" >> $GITHUB_OUTPUT
+            TAGS="${TAGS},${IMAGE}:${VERSION_TAG}"
           fi
 
-          # if main, also push :latest
+          # If this is main branch, also push :latest
           if [[ "${GITHUB_REF}" == refs/heads/main ]]; then
-            echo "tag_latest=latest" >> $GITHUB_OUTPUT
+            TAGS="${TAGS},${IMAGE}:latest"
           fi
+
+          echo "tags=${TAGS}" >> "$GITHUB_OUTPUT"
+
 
       - name: Build and push
         uses: docker/build-push-action@v5
@@ -58,9 +62,6 @@ jobs:
           file: ./Dockerfile
           push: true
           platforms: linux/amd64
-          tags: |
-            ${{ env.IMAGE_NAME }}:${{ steps.vars.outputs.tag_sha }}
-            ${{ env.IMAGE_NAME }}:${{ steps.vars.outputs.tag_version || steps.vars.outputs.tag_sha }}
-            ${{ env.IMAGE_NAME }}:${{ steps.vars.outputs.tag_latest || '' }}
+          tags: ${{ steps.vars.outputs.tags }}
           labels: |
             org.opencontainers.image.source=${{ github.repository }}

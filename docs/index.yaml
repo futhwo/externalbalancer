@@ -3,13 +3,13 @@ entries:
   externalbalancer-operator:
   - apiVersion: v2
     appVersion: 0.1.0
-    created: "2025-11-09T23:53:10.247511075Z"
+    created: "2025-11-10T00:05:19.169840866Z"
     description: An operator that manages Traefik-based external load balancing for
       external backends.
-    digest: d2ea793ae1807428d08711201193f959d74916e5df87995c46ecddb4e7e92f09
+    digest: f14b621cd8d798f378453361e5ca87138a7f8bb983ef8e01715db9c903896ee6
     name: externalbalancer-operator
     type: application
     urls:
     - https://futhwo.github.io/externalbalancer/externalbalancer-operator-0.1.0.tgz
     version: 0.1.0
-generated: "2025-11-09T23:53:10.24708897Z"
+generated: "2025-11-10T00:05:19.169419531Z"

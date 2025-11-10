@@ -2,44 +2,47 @@ name: Release Helm Chart
 
 on:
   push:
-    branches: [ "main" ]
-    tags: [ "v*" ]
+    tags:
+      - "v*"
 
 permissions:
-  contents: write  # <-- needed so github-actions[bot] can push
+  contents: write
 
 jobs:
   release:
+    # Don't rerun on commits made by this workflow
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          # This keeps the token so we can push back
           persist-credentials: true
+          fetch-depth: 0
 
       - name: Set up Helm
         uses: azure/setup-helm@v4
         with:
           version: v3.15.2
 
-      - name: Prepare docs directory
-        run: |
-          mkdir -p docs
+      - name: Ensure docs directory
+        run: mkdir -p docs
 
       - name: Package chart
         run: |
-          helm package charts/externalbalancer-operator --destination docs
+          helm package charts/externalbalancer-operator \
+            --destination docs
 
       - name: Update index.yaml
         run: |
-          helm repo index docs --url https://futhwo.github.io/externalbalancer
+          helm repo index docs \
+            --url https://futhwo.github.io/externalbalancer
 
       - name: Commit and push updated index
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add docs
-          git commit -m "Update Helm chart index [skip ci]" || echo "No changes to commit"
+          git commit -m "Update Helm chart index for $GITHUB_REF_NAME [skip ci]" || echo "No changes"
           git push origin HEAD:main

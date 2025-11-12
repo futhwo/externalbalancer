@@ -1,8 +1,8 @@
 package v1alpha1
 
 import (
-	runtime "k8s.io/apimachinery/pkg/runtime"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
 // Strategy determines how resources are rendered.
@@ -29,7 +29,7 @@ type Backend struct {
 
 // MiddlewareRef references an existing Traefik Middleware by name/namespace.
 type MiddlewareRef struct {
-	Name      string `json:"name"`
+	Name string `json:"name"`
 	// Optional; defaults to the IngressRoute namespace when empty.
 	Namespace string `json:"namespace,omitempty"`
 }
@@ -54,9 +54,9 @@ type CertManagerTLS struct {
 }
 
 type CertManagerIssuerRef struct {
-	Name  string `json:"name"`
+	Name string `json:"name"`
 	// Kind must be "Issuer" or "ClusterIssuer"; defaults to ClusterIssuer when empty.
-	Kind  string `json:"kind,omitempty"`
+	Kind string `json:"kind,omitempty"`
 	// Group defaults to "cert-manager.io" when empty.
 	Group string `json:"group,omitempty"`
 }
@@ -255,7 +255,9 @@ func (in *ExternalBalancerList) DeepCopyObject() runtime.Object { return in.Deep
 // DeepCopy helpers for TLS types (value-like)
 func (in *MiddlewareRef) DeepCopyInto(out *MiddlewareRef) { *out = *in }
 func (in *MiddlewareRef) DeepCopy() *MiddlewareRef {
-	if in == nil { return nil }
+	if in == nil {
+		return nil
+	}
 	out := new(MiddlewareRef)
 	*out = *in
 	return out
@@ -268,18 +270,41 @@ func (in *TLSConfig) DeepCopyInto(out *TLSConfig) {
 	}
 }
 func (in *TLSConfig) DeepCopy() *TLSConfig {
-	if in == nil { return nil }
-	out := new(TLSConfig); in.DeepCopyInto(out); return out
+	if in == nil {
+		return nil
+	}
+	out := new(TLSConfig)
+	in.DeepCopyInto(out)
+	return out
 }
 func (in *CertManagerTLS) DeepCopyInto(out *CertManagerTLS) {
 	*out = *in
-	if in.Duration != nil { d := *in.Duration; out.Duration = &d }
-	if in.RenewBefore != nil { r := *in.RenewBefore; out.RenewBefore = &r }
-	if in.Usages != nil { out.Usages = append([]string{}, in.Usages...) }
+	if in.Duration != nil {
+		d := *in.Duration
+		out.Duration = &d
+	}
+	if in.RenewBefore != nil {
+		r := *in.RenewBefore
+		out.RenewBefore = &r
+	}
+	if in.Usages != nil {
+		out.Usages = append([]string{}, in.Usages...)
+	}
 }
 func (in *CertManagerTLS) DeepCopy() *CertManagerTLS {
-	if in == nil { return nil }
-	out := new(CertManagerTLS); in.DeepCopyInto(out); return out
+	if in == nil {
+		return nil
+	}
+	out := new(CertManagerTLS)
+	in.DeepCopyInto(out)
+	return out
 }
 func (in *CertManagerIssuerRef) DeepCopyInto(out *CertManagerIssuerRef) { *out = *in }
-func (in *CertManagerIssuerRef) DeepCopy() *CertManagerIssuerRef { if in == nil { return nil }; out := new(CertManagerIssuerRef); *out = *in; return out }
+func (in *CertManagerIssuerRef) DeepCopy() *CertManagerIssuerRef {
+	if in == nil {
+		return nil
+	}
+	out := new(CertManagerIssuerRef)
+	*out = *in
+	return out
+}
